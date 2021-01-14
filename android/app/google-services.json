@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "985657884246",
+    "firebase_url": "https://lupitaappdemo.firebaseio.com",
+    "project_id": "lupitaappdemo",
+    "storage_bucket": "lupitaappdemo.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:985657884246:android:273a1775590d3fdd7c85f7",
+        "android_client_info": {
+          "package_name": "com.example.lupita_ft"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "985657884246-juk12iju6n6pukl6tlv2ct61edebh2a5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCB01IF-F86s4wulhbCkqULzAQvaFLleyc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "985657884246-juk12iju6n6pukl6tlv2ct61edebh2a5.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

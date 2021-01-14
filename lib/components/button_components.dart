@@ -10,7 +10,7 @@ class LButtons {
         height: 50.0,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(25.0),
-          color: Colors.greenAccent,
+          color: Colors.green[600],
         ),
         child: Center(
           child: Text(

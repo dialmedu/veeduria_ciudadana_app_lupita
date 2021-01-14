@@ -1,6 +1,4 @@
-import 'dart:io';
-
-import 'package:file_picker/file_picker.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:lupita_ft/components/button_components.dart';
 import 'package:lupita_ft/model/denuncia.dart';
@@ -15,6 +13,28 @@ class FormPage extends StatefulWidget {
 class _FormPageState extends State<FormPage> {
   Denuncia denuncia = new Denuncia(1, 'Los patios');
   bool _continuar = false;
+  bool _guardando = false;
+
+  TextEditingController _descripcion, _nombre, _documento;
+  DatabaseReference _firebase;
+
+  @override
+  void initState() {
+    super.initState();
+    initList();
+    initControllers();
+    initFirebase();
+  }
+
+  void initFirebase() {
+    _firebase = FirebaseDatabase.instance.reference().child("Denuncias");
+  }
+
+  void initControllers() {
+    _descripcion = new TextEditingController();
+    _nombre = new TextEditingController();
+    _documento = new TextEditingController();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +46,9 @@ class _FormPageState extends State<FormPage> {
             Center(
               child: _continuar == false
                   ? Container(
-                      width: MediaQuery.of(context).size.width - 100,
+                      width: MediaQuery.of(context).size.width < 320
+                          ? MediaQuery.of(context).size.width * 0.6
+                          : MediaQuery.of(context).size.width * 0.8,
                       child: Image.asset('images/denunciar.jpg'),
                     )
                   : SizedBox(
@@ -43,20 +65,11 @@ class _FormPageState extends State<FormPage> {
             _continuar == false
                 ? LButtons.buttonPrimary('Continuar',
                     () => {setState(() => _continuar = true)}, context)
-                : buildFomr(),
+                : buildForm(),
           ],
         ),
       ),
     );
-  }
-
-  void _addFiles() async {
-    FilePickerResult result =
-        await FilePicker.platform.pickFiles(allowMultiple: true);
-    if (result != null) {
-      File file = File(result.files.single.path);
-      setState(() => denuncia.uploads.add(file));
-    }
   }
 
   InputDecoration decorationTextField({String hintText}) {
@@ -67,7 +80,7 @@ class _FormPageState extends State<FormPage> {
         hintText: hintText);
   }
 
-  Widget buildFomr() {
+  Widget buildForm() {
     return Container(
         child: Padding(
       padding: const EdgeInsets.all(15.0),
@@ -76,6 +89,7 @@ class _FormPageState extends State<FormPage> {
         children: [
           Text('Descripción:', textAlign: TextAlign.left),
           TextField(
+            controller: _descripcion,
             decoration: decorationTextField(
                 hintText: 'Agrega una descripción de tu denuncia'),
             maxLines: 8,
@@ -85,6 +99,7 @@ class _FormPageState extends State<FormPage> {
           ),
           Text('Tu nombre:', textAlign: TextAlign.left),
           TextField(
+            controller: _nombre,
             maxLines: 1,
             decoration:
                 decorationTextField(hintText: 'Ingrese nombres y apellidos'),
@@ -94,6 +109,7 @@ class _FormPageState extends State<FormPage> {
           ),
           Text('Tu documento:', textAlign: TextAlign.left),
           TextField(
+            controller: _documento,
             maxLines: 1,
             decoration:
                 decorationTextField(hintText: 'Ingrese numero de documento'),
@@ -101,40 +117,40 @@ class _FormPageState extends State<FormPage> {
           SizedBox(
             height: 50.0,
           ),
-          LButtons.buttonPrimary(
-              "Guardar Denuncia", goToFormMessagePage, context)
+          LButtons.buttonPrimary("Guardar Denuncia", saveDenuncia, context)
         ],
       ),
     ));
+  }
+
+  Future<void> saveDenuncia() async {
+    // todo save on firebase
+    String nombres = _nombre.text;
+    String documento = _documento.text;
+    String descripcion = _descripcion.text;
+    DateTime today = new DateTime.now();
+    String dateSlug =
+        "${today.year.toString()}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
+
+    Map<String, String> denuncia = {
+      'nombres': nombres,
+      'documento': documento,
+      'descripcion': descripcion,
+      'municipio': _selectedMunicipio.name,
+      'municipio_id': _selectedMunicipio.id.toString(),
+      'fecha': dateSlug,
+      'user': 'anonimo'
+    };
+
+    _firebase.push().set(denuncia).then((value) {
+      goToFormMessagePage();
+    });
   }
 
   void goToFormMessagePage() {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => FormMessagePage()),
     );
-  }
-
-  List<Widget> _getList() {
-    List<Widget> list = new List();
-    if (denuncia.uploads != null) {
-      denuncia.uploads.forEach((File file) {
-        final tempWidget = ListTile(
-          title: Text(file.path.split('/').last),
-          leading: Icon(Icons.label),
-          trailing: Radio(
-            value: 1,
-            groupValue: 0,
-            onChanged: (value) {
-              // Update value.
-              final index = denuncia.uploads.indexOf(file);
-              setState(() => denuncia.uploads.removeAt(index));
-            },
-          ),
-        );
-        list.add(tempWidget);
-      });
-    }
-    return list;
   }
 
   List<Municipio> _municipios;
@@ -154,7 +170,6 @@ class _FormPageState extends State<FormPage> {
   }
 
   Widget buildSelect() {
-    initList();
     return Container(
       child: Center(
         child: Column(
@@ -173,7 +188,7 @@ class _FormPageState extends State<FormPage> {
             SizedBox(
               height: 5.0,
             ),
-            Text('actualmente: ${_selectedMunicipio.name}'),
+            Text('Actualmente: ${_selectedMunicipio.name}'),
           ],
         ),
       ),

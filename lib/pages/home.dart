@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lupita_ft/model/municipio.dart';
 import 'package:lupita_ft/pages/form.dart';
+import 'package:lupita_ft/pages/report.dart';
 
 class Home extends StatefulWidget {
   @override
@@ -9,7 +10,7 @@ class Home extends StatefulWidget {
 
 class _HomePageState extends State<Home> {
   double _size_box = 150.0;
-  double _size_box_image = 200.0;
+  double _size_box_image = 150.0;
 
   @override
   void initState() {
@@ -20,37 +21,54 @@ class _HomePageState extends State<Home> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        children: [
-          RichText(
-            text: TextSpan(children: <TextSpan>[
-              TextSpan(text: 'Hola', style: TextStyle(color: Colors.black))
-            ]),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 50.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(left: 25.0),
+                child: Text(
+                  'Hola',
+                  style: TextStyle(
+                      color: Colors.black87,
+                      fontSize: 32.0,
+                      fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.left,
+                ),
+              ),
+              buildSelect(),
+              SizedBox(
+                height: 5.0,
+              ),
+              Container(
+                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  child: _buildCard(
+                      'images/denunciar.jpg',
+                      'Se parte de la veeduria ciudadana, reporte en LUPITA los casos de tu municipio',
+                      'Denunciar',
+                      goToFormPage,
+                      Colors.green[100])),
+              Container(
+                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  child: _buildCard(
+                      'images/leer.jpg',
+                      'Informate de las denuncias y noticias de tu municipio',
+                      'Leer',
+                      goToReportPage,
+                      Colors.yellow[200])),
+              Center(
+                child: InkWell(
+                  onTap: () {
+                    Navigator.pop(context);
+                  },
+                  child: Container(),
+                ),
+              ),
+            ],
           ),
-          buildSelect(),
-          SizedBox(
-            height: 5.0,
-          ),
-          Container(
-              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              child: _buildCard(
-                  'images/denunciar.jpg',
-                  'Se parte de la veeduria ciudadana',
-                  'Denunciar',
-                  goToFormPage)),
-          Container(
-              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              child: _buildCard(
-                  'images/leer.jpg', 'Hacer Denuncia', 'Leer', _showDialog)),
-          Center(
-            child: InkWell(
-              onTap: () {
-                Navigator.pop(context);
-              },
-              child: Container(),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -61,8 +79,14 @@ class _HomePageState extends State<Home> {
     );
   }
 
-  Widget _buildCard(
-      String imagePatch, String text, String action, Function callback) {
+  void goToReportPage() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => ReportPage()),
+    );
+  }
+
+  Widget _buildCard(String imagePatch, String text, String action,
+      Function callback, Color boxColor) {
     return Padding(
       padding: EdgeInsets.only(top: 15.0, bottom: 5.0, left: 5.0, right: 5.0),
       child: InkWell(
@@ -78,51 +102,58 @@ class _HomePageState extends State<Home> {
             borderRadius: BorderRadius.circular(10.0),
             color: Colors.white,
           ),
-          height: MediaQuery.of(context).size.height / 3,
-          width: MediaQuery.of(context).size.width - 50,
+          height: MediaQuery.of(context).size.height / 3 > 250
+              ? MediaQuery.of(context).size.height / 3
+              : 180,
+          width: MediaQuery.of(context).size.width * 0.9,
           child: Row(
             children: <Widget>[
               Container(
                 alignment: Alignment.center,
-                height: _size_box,
-                width: _size_box_image,
+                width: MediaQuery.of(context).size.width * 0.35,
                 child: Image.asset(
                   imagePatch,
                   height: double.infinity,
                   width: double.infinity,
-                  fit: BoxFit.cover,
+                  fit: BoxFit.fitWidth,
                 ),
               ),
               Container(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 5.0, vertical: 15.0),
-                  child: Column(
-                    children: <Widget>[
-                      Container(
-                        width: _size_box,
-                        height: 150,
-                        child: Text(text),
-                      ),
-                      Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(25.0),
-                          color: Colors.greenAccent,
-                        ),
-                        width: _size_box,
-                        height: 30,
-                        child: Center(
-                          child: Text(
-                            'Continuar',
+                decoration: BoxDecoration(color: boxColor),
+                child: Column(
+                  children: <Widget>[
+                    Container(
+                      width: MediaQuery.of(context).size.width * 0.50,
+                      child: Padding(
+                        padding: const EdgeInsets.all(15.0),
+                        child: Text(text,
                             style: TextStyle(
-                                fontSize: 14.0,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white),
-                          ),
+                              fontStyle: FontStyle.italic,
+                              color: Colors.black54,
+                            )),
+                      ),
+                    ),
+                    SizedBox(
+                      height: 25.0,
+                    ),
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(25.0),
+                        color: Colors.green[600],
+                      ),
+                      width: _size_box,
+                      height: 30,
+                      child: Center(
+                        child: Text(
+                          action,
+                          style: TextStyle(
+                              fontSize: 14.0,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               )
             ],
@@ -142,7 +173,7 @@ class _HomePageState extends State<Home> {
     _selectedMunicipio = _dropdownMenuItems[0].value;
   }
 
-  onChangeDropdownItem(Municipio selectedMunicipio) {
+  onChangeMunicipioItem(Municipio selectedMunicipio) {
     setState(() {
       _selectedMunicipio = selectedMunicipio;
     });
@@ -150,24 +181,30 @@ class _HomePageState extends State<Home> {
 
   Widget buildSelect() {
     return Container(
-      child: Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 15.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text("Seleccione Municipio"),
+            Text("Busca tu Municipio"),
             SizedBox(
               height: 5.0,
             ),
             DropdownButton(
               value: _selectedMunicipio,
               items: _dropdownMenuItems,
-              onChanged: onChangeDropdownItem,
+              onChanged: onChangeMunicipioItem,
+              style: TextStyle(color: Colors.black87, fontSize: 24.0),
             ),
             SizedBox(
               height: 5.0,
             ),
-            Text('actualmente: ${_selectedMunicipio.name}'),
+            Text('Actualmente: ${_selectedMunicipio.name}',
+                style: TextStyle(
+                  fontSize: 16.0,
+                  fontStyle: FontStyle.italic,
+                  color: Colors.black45,
+                )),
           ],
         ),
       ),
