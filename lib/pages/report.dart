@@ -1,5 +1,6 @@
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:lupita_ft/components/button_components.dart';
 import 'package:lupita_ft/model/municipio.dart';
 import 'package:lupita_ft/pages/form.dart';
@@ -52,13 +53,9 @@ class _ReportPageState extends State<ReportPage> {
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: FutureBuilder(
-                    future: _firebase
-                        .orderByChild('municipio')
-                        .equalTo(_selectedMunicipio.name)
-                        .limitToFirst(20)
-                        .once(),
+                    future: search(),
                     builder: (context, AsyncSnapshot<DataSnapshot> snapshot) {
-                      if (snapshot.hasData) {
+                      if (snapshot != null && snapshot.hasData) {
                         lists.clear();
                         Map<dynamic, dynamic> values = snapshot.data.value;
                         if (values != null && values.length > 0) {
@@ -149,8 +146,7 @@ class _ReportPageState extends State<ReportPage> {
   List<DropdownMenuItem<Municipio>> _dropdownMenuItems;
   Municipio _selectedMunicipio;
 
-  initList() {
-    _municipios = Municipio.getMunicipios();
+  initList() async {
     _dropdownMenuItems = buildDropdownMenuItems(_municipios);
     _selectedMunicipio = _dropdownMenuItems[0].value;
   }
@@ -200,7 +196,15 @@ class _ReportPageState extends State<ReportPage> {
     return items;
   }
 
-  void search(String municipio) {
-    _firebase.orderByChild('municipio').equalTo(municipio);
+  Future<DataSnapshot> search() async  {
+    try {
+      return _firebase
+          .orderByChild('municipio')
+          .equalTo(_selectedMunicipio.name)
+          .limitToFirst(20)
+          .once();
+    } on PlatformException catch (e) {
+      return null;
+    }
   }
 }

@@ -15,7 +15,6 @@ class _HomePageState extends State<Home> {
   @override
   void initState() {
     super.initState();
-    initList();
   }
 
   @override
@@ -167,10 +166,11 @@ class _HomePageState extends State<Home> {
   List<DropdownMenuItem<Municipio>> _dropdownMenuItems;
   Municipio _selectedMunicipio;
 
-  initList() {
-    _municipios = Municipio.getMunicipios();
-    _dropdownMenuItems = buildDropdownMenuItems(_municipios);
-    _selectedMunicipio = _dropdownMenuItems[0].value;
+  initList() async {
+      setState(() {
+        _dropdownMenuItems = buildDropdownMenuItems(_municipios);
+        _selectedMunicipio = _dropdownMenuItems[0].value;
+      });
   }
 
   onChangeMunicipioItem(Municipio selectedMunicipio) {
@@ -190,16 +190,26 @@ class _HomePageState extends State<Home> {
             SizedBox(
               height: 5.0,
             ),
-            DropdownButton(
-              value: _selectedMunicipio,
-              items: _dropdownMenuItems,
-              onChanged: onChangeMunicipioItem,
-              style: TextStyle(color: Colors.black87, fontSize: 24.0),
-            ),
+            StreamBuilder(
+              stream: Municipio.getMunicipios(),
+              builder: (context, snapshot){
+              if (snapshot == null && !snapshot.hasData) {
+                  return Text('Cargando Municipios...');
+              }
+              dynamic data = snapshot.data;
+              // _municipios
+              initList();
+              return  DropdownButton(
+                value: _selectedMunicipio == null ? new Municipio(0,'Seleccione Municipio') : _selectedMunicipio,
+                items: _dropdownMenuItems,
+                onChanged: onChangeMunicipioItem,
+                style: TextStyle(color: Colors.black87, fontSize: 24.0),
+              );
+            }),
             SizedBox(
               height: 5.0,
             ),
-            Text('Actualmente: ${_selectedMunicipio.name}',
+            Text('Actualmente: ${_selectedMunicipio == null ? '' : _selectedMunicipio.name}',
                 style: TextStyle(
                   fontSize: 16.0,
                   fontStyle: FontStyle.italic,

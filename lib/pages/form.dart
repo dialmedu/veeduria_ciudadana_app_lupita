@@ -157,8 +157,7 @@ class _FormPageState extends State<FormPage> {
   List<DropdownMenuItem<Municipio>> _dropdownMenuItems;
   Municipio _selectedMunicipio;
 
-  initList() {
-    _municipios = Municipio.getMunicipios();
+  initList() async {
     _dropdownMenuItems = buildDropdownMenuItems(_municipios);
     _selectedMunicipio = _dropdownMenuItems[0].value;
   }
