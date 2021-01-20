@@ -1,7 +1,12 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:lupita_ft/model/municipio.dart';
+import 'package:lupita_ft/model/NotificationItem.dart';
+import 'package:lupita_ft/model/township.dart';
 import 'package:lupita_ft/pages/form.dart';
 import 'package:lupita_ft/pages/report.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+
+import '../model/township.dart';
 
 class Home extends StatefulWidget {
   @override
@@ -11,11 +16,96 @@ class Home extends StatefulWidget {
 class _HomePageState extends State<Home> {
   double _size_box = 150.0;
   double _size_box_image = 150.0;
+  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging();
+
+  Widget _buildDialog(BuildContext context, NotificationItem item) {
+    return AlertDialog(
+      content: Text("${item.matchteam} with score: ${item.score}"),
+      actions: <Widget>[
+        FlatButton(
+          child: const Text('CLOSE'),
+          onPressed: () {
+            Navigator.pop(context, false);
+          },
+        ),
+        FlatButton(
+          child: const Text('SHOW'),
+          onPressed: () {
+            Navigator.pop(context, true);
+          },
+        ),
+      ],
+    );
+  }
+
+  final Map<String, NotificationItem> _items = <String, NotificationItem>{};
+  NotificationItem _itemForMessage(Map<String, dynamic> message) {
+    final dynamic data = message['data'] ?? message;
+    final String itemId = data['id'];
+    final NotificationItem item = _items.putIfAbsent(itemId, () => NotificationItem(itemId: itemId))
+      ..matchteam = data['matchteam']
+      ..score = data['score'];
+    return item;
+  }
+
+  void _showItemDialog(Map<String, dynamic> message) {
+    showDialog<bool>(
+      context: context,
+      builder: (_) => _buildDialog(context, _itemForMessage(message)),
+    ).then((bool shouldNavigate) {
+      if (shouldNavigate == true) {
+        _navigateToItemDetail(message);
+      }
+    });
+  }
+
+  void _navigateToItemDetail(Map<String, dynamic> message) {
+    final NotificationItem item = _itemForMessage(message);
+    // Clear away dialogs
+    Navigator.popUntil(context, (Route<dynamic> route) => route is PageRoute);
+    if (!item.route.isCurrent) {
+      Navigator.push(context, item.route);
+    }
+  }
 
   @override
   void initState() {
     super.initState();
+    initFirebaseMessage();
   }
+
+  void initFirebaseMessage(){
+    _firebaseMessaging.configure(
+      onMessage: (Map<String, dynamic> message) async {
+        print("onMessage: $message");
+        _showItemDialog(message);
+      },
+      onBackgroundMessage: myBackgroundMessageHandler,
+      onLaunch: (Map<String, dynamic> message) async {
+        print("onLaunch: $message");
+        _navigateToItemDetail(message);
+      },
+      onResume: (Map<String, dynamic> message) async {
+        print("onResume: $message");
+        _navigateToItemDetail(message);
+      },
+    );
+
+    _firebaseMessaging.requestNotificationPermissions(
+        const IosNotificationSettings(
+                sound: true, badge: true, alert: true, provisional: true));
+    _firebaseMessaging.onIosSettingsRegistered
+        .listen((IosNotificationSettings settings) {
+      print("Settings registered: $settings");
+    });
+    _firebaseMessaging.getToken().then((String token) {
+      assert(token != null);
+
+      print("Push Messaging token: $token");
+    });
+    _firebaseMessaging.subscribeToTopic("matchscore");
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -80,7 +170,9 @@ class _HomePageState extends State<Home> {
 
   void goToReportPage() {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => ReportPage()),
+      MaterialPageRoute(builder: (context) => ReportPage(), settings: RouteSettings(
+        arguments: _selectedMunicipio,
+      )),
     );
   }
 
@@ -162,20 +254,20 @@ class _HomePageState extends State<Home> {
     );
   }
 
-  List<Municipio> _municipios;
-  List<DropdownMenuItem<Municipio>> _dropdownMenuItems;
-  Municipio _selectedMunicipio;
+  List<Township> _municipios;
+  List<DropdownMenuItem<int>> _dropdownMenuItems;
+  Township _selectedMunicipio;
 
-  initList() async {
-      setState(() {
-        _dropdownMenuItems = buildDropdownMenuItems(_municipios);
-        _selectedMunicipio = _dropdownMenuItems[0].value;
-      });
+  initList() {
+      _dropdownMenuItems = buildDropdownMenuItems(_municipios);
+      if(_selectedMunicipio == null){
+          _selectedMunicipio = _municipios.firstWhere((element) => element.id == _dropdownMenuItems[0].value);
+      }
   }
 
-  onChangeMunicipioItem(Municipio selectedMunicipio) {
+  onChangeMunicipioItem(int selectedMunicipio) {
     setState(() {
-      _selectedMunicipio = selectedMunicipio;
+      _selectedMunicipio = _municipios.firstWhere((element) => element.id == selectedMunicipio);
     });
   }
 
@@ -191,16 +283,18 @@ class _HomePageState extends State<Home> {
               height: 5.0,
             ),
             StreamBuilder(
-              stream: Municipio.getMunicipios(),
-              builder: (context, snapshot){
-              if (snapshot == null && !snapshot.hasData) {
+              stream: Township.getTownships(),
+              builder: (context, AsyncSnapshot<QuerySnapshot> snapshot){
+              if (!snapshot.hasData) {
                   return Text('Cargando Municipios...');
               }
-              dynamic data = snapshot.data;
-              // _municipios
-              initList();
+              _municipios = snapshot.data.docs.map((e) => new Township(e.data()['municipio_id'], e.data()['nombre'])).toList();
+              _dropdownMenuItems = buildDropdownMenuItems(_municipios);
+              if(_selectedMunicipio == null){
+                _selectedMunicipio = _municipios.firstWhere((element) => element.id == _dropdownMenuItems[0].value);
+              }
               return  DropdownButton(
-                value: _selectedMunicipio == null ? new Municipio(0,'Seleccione Municipio') : _selectedMunicipio,
+                value: _selectedMunicipio.id,
                 items: _dropdownMenuItems,
                 onChanged: onChangeMunicipioItem,
                 style: TextStyle(color: Colors.black87, fontSize: 24.0),
@@ -221,12 +315,12 @@ class _HomePageState extends State<Home> {
     );
   }
 
-  List<DropdownMenuItem<Municipio>> buildDropdownMenuItems(List municipios) {
-    List<DropdownMenuItem<Municipio>> items = List();
-    for (Municipio municipio in municipios) {
+  List<DropdownMenuItem<int>> buildDropdownMenuItems(List municipios) {
+    List<DropdownMenuItem<int>> items = List();
+    for (Township municipio in municipios) {
       items.add(
         DropdownMenuItem(
-          value: municipio,
+          value: municipio.id,
           child: Text(municipio.name),
         ),
       );
@@ -258,4 +352,18 @@ class _HomePageState extends State<Home> {
       },
     );
   }
+}
+
+// ignore: missing_return
+Future<dynamic> myBackgroundMessageHandler(Map<String, dynamic> message) {
+  if (message.containsKey('data')) {
+    // Handle data message
+    final dynamic data = message['data'];
+  }
+
+  if (message.containsKey('notification')) {
+    // Handle notification message
+    final dynamic notification = message['notification'];
+  }
+  // Or do other work.
 }

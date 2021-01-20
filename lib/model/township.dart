@@ -2,13 +2,13 @@ import 'dart:ffi';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class Municipio {
+class Township {
   int id;
   String name;
 
-  Municipio(this.id, this.name);
+  Township(this.id, this.name);
 
-  static Stream<QuerySnapshot> getMunicipios() {
+  static Stream<QuerySnapshot> getTownships() {
     return FirebaseFirestore.instance.collection("municipios").snapshots();
   }
 }

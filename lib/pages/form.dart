@@ -1,8 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:lupita_ft/components/button_components.dart';
-import 'package:lupita_ft/model/denuncia.dart';
-import 'package:lupita_ft/model/municipio.dart';
+import 'package:lupita_ft/model/complaint.dart';
+import 'package:lupita_ft/model/township.dart';
 import 'package:lupita_ft/pages/from_message.dart';
 
 class FormPage extends StatefulWidget {
@@ -11,7 +12,7 @@ class FormPage extends StatefulWidget {
 }
 
 class _FormPageState extends State<FormPage> {
-  Denuncia denuncia = new Denuncia(1, 'Los patios');
+  Complaint denuncia = new Complaint(1, 'Los patios');
   bool _continuar = false;
   bool _guardando = false;
 
@@ -117,27 +118,27 @@ class _FormPageState extends State<FormPage> {
           SizedBox(
             height: 50.0,
           ),
-          LButtons.buttonPrimary("Guardar Denuncia", saveDenuncia, context)
+          LButtons.buttonPrimary("Guardar Denuncia", saveComplaint, context)
         ],
       ),
     ));
   }
 
-  Future<void> saveDenuncia() async {
+  Future<void> saveComplaint() async {
     // todo save on firebase
-    String nombres = _nombre.text;
-    String documento = _documento.text;
-    String descripcion = _descripcion.text;
+    String name = _nombre.text;
+    String document = _documento.text;
+    String description = _descripcion.text;
     DateTime today = new DateTime.now();
     String dateSlug =
         "${today.year.toString()}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
 
-    Map<String, String> denuncia = {
-      'nombres': nombres,
-      'documento': documento,
-      'descripcion': descripcion,
-      'municipio': _selectedMunicipio.name,
-      'municipio_id': _selectedMunicipio.id.toString(),
+    Map<String, String> complaint = {
+      'nombres': name,
+      'documento': document,
+      'descripcion': description,
+      'municipio': _selectedTownship.name,
+      'municipio_id': _selectedTownship.id.toString(),
       'fecha': dateSlug,
       'user': 'anonimo'
     };
@@ -153,53 +154,73 @@ class _FormPageState extends State<FormPage> {
     );
   }
 
-  List<Municipio> _municipios;
-  List<DropdownMenuItem<Municipio>> _dropdownMenuItems;
-  Municipio _selectedMunicipio;
+  List<Township> _township;
+  List<DropdownMenuItem<int>> _dropdownMenuItems;
+  Township _selectedTownship;
 
-  initList() async {
-    _dropdownMenuItems = buildDropdownMenuItems(_municipios);
-    _selectedMunicipio = _dropdownMenuItems[0].value;
+  initList() {
+    _dropdownMenuItems = buildDropdownMenuItems(_township);
+    if(_selectedTownship == null){
+      _selectedTownship = _township.firstWhere((element) => element.id == _dropdownMenuItems[0].value);
+    }
   }
 
-  onChangeDropdownItem(Municipio selectedMunicipio) {
+  onChangeMunicipioItem(int selectedMunicipio) {
     setState(() {
-      _selectedMunicipio = selectedMunicipio;
+      _selectedTownship = _township.firstWhere((element) => element.id == selectedMunicipio);
     });
   }
 
   Widget buildSelect() {
     return Container(
-      child: Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 15.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text("Seleccione Municipio"),
+            Text("Busca tu Municipio"),
             SizedBox(
               height: 5.0,
             ),
-            DropdownButton(
-              value: _selectedMunicipio,
-              items: _dropdownMenuItems,
-              onChanged: onChangeDropdownItem,
-            ),
+            StreamBuilder(
+                stream: Township.getTownships(),
+                builder: (context, AsyncSnapshot<QuerySnapshot> snapshot){
+                  if (!snapshot.hasData) {
+                    return Text('Cargando Municipios...');
+                  }
+                  _township = snapshot.data.docs.map((e) => new Township(e.data()['municipio_id'], e.data()['nombre'])).toList();
+                  _dropdownMenuItems = buildDropdownMenuItems(_township);
+                  if(_selectedTownship == null){
+                    _selectedTownship = _township.firstWhere((element) => element.id == _dropdownMenuItems[0].value);
+                  }
+                  return  DropdownButton(
+                    value: _selectedTownship.id,
+                    items: _dropdownMenuItems,
+                    onChanged: onChangeMunicipioItem,
+                    style: TextStyle(color: Colors.black87, fontSize: 24.0),
+                  );
+                }),
             SizedBox(
               height: 5.0,
             ),
-            Text('Actualmente: ${_selectedMunicipio.name}'),
+            Text('Actualmente: ${_selectedTownship == null ? '' : _selectedTownship.name}',
+                style: TextStyle(
+                  fontSize: 16.0,
+                  fontStyle: FontStyle.italic,
+                  color: Colors.black45,
+                )),
           ],
         ),
       ),
     );
   }
 
-  List<DropdownMenuItem<Municipio>> buildDropdownMenuItems(List municipios) {
-    List<DropdownMenuItem<Municipio>> items = List();
-    for (Municipio municipio in municipios) {
+  List<DropdownMenuItem<int>> buildDropdownMenuItems(List municipios) {
+    List<DropdownMenuItem<int>> items = List();
+    for (Township municipio in municipios) {
       items.add(
         DropdownMenuItem(
-          value: municipio,
+          value: municipio.id,
           child: Text(municipio.name),
         ),
       );

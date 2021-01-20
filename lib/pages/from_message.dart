@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lupita_ft/components/button_components.dart';
-import 'package:lupita_ft/model/denuncia.dart';
+import 'package:lupita_ft/model/complaint.dart';
 
 import 'Home.dart';
 
@@ -10,7 +10,7 @@ class FormMessagePage extends StatefulWidget {
 }
 
 class _FormMessagePageState extends State<FormMessagePage> {
-  Denuncia denuncia = new Denuncia(1, 'Los patios');
+  Complaint denuncia = new Complaint(1, 'Los patios');
   bool _continuar = true;
 
   @override
