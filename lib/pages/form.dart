@@ -3,7 +3,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:lupita_ft/components/button_components.dart';
 import 'package:lupita_ft/model/complaint.dart';
-import 'package:lupita_ft/model/township.dart';
+import 'package:lupita_ft/model/town.dart';
 import 'package:lupita_ft/pages/from_message.dart';
 
 class FormPage extends StatefulWidget {
@@ -22,7 +22,6 @@ class _FormPageState extends State<FormPage> {
   @override
   void initState() {
     super.initState();
-    initList();
     initControllers();
     initFirebase();
   }
@@ -137,13 +136,13 @@ class _FormPageState extends State<FormPage> {
       'nombres': name,
       'documento': document,
       'descripcion': description,
-      'municipio': _selectedTownship.name,
-      'municipio_id': _selectedTownship.id.toString(),
+      'municipio': _selectedTown.name,
+      'municipio_id': _selectedTown.id.toString(),
       'fecha': dateSlug,
       'user': 'anonimo'
     };
 
-    _firebase.push().set(denuncia).then((value) {
+    _firebase.push().set(complaint).then((value) {
       goToFormMessagePage();
     });
   }
@@ -154,20 +153,14 @@ class _FormPageState extends State<FormPage> {
     );
   }
 
-  List<Township> _township;
+  List<Town> _town;
   List<DropdownMenuItem<int>> _dropdownMenuItems;
-  Township _selectedTownship;
+  Town _selectedTown;
 
-  initList() {
-    _dropdownMenuItems = buildDropdownMenuItems(_township);
-    if(_selectedTownship == null){
-      _selectedTownship = _township.firstWhere((element) => element.id == _dropdownMenuItems[0].value);
-    }
-  }
 
   onChangeMunicipioItem(int selectedMunicipio) {
     setState(() {
-      _selectedTownship = _township.firstWhere((element) => element.id == selectedMunicipio);
+      _selectedTown = _town.firstWhere((element) => element.number == selectedMunicipio);
     });
   }
 
@@ -183,18 +176,21 @@ class _FormPageState extends State<FormPage> {
               height: 5.0,
             ),
             StreamBuilder(
-                stream: Township.getTownships(),
+                stream: Town.getTowns(),
                 builder: (context, AsyncSnapshot<QuerySnapshot> snapshot){
                   if (!snapshot.hasData) {
                     return Text('Cargando Municipios...');
                   }
-                  _township = snapshot.data.docs.map((e) => new Township(e.data()['municipio_id'], e.data()['nombre'])).toList();
-                  _dropdownMenuItems = buildDropdownMenuItems(_township);
-                  if(_selectedTownship == null){
-                    _selectedTownship = _township.firstWhere((element) => element.id == _dropdownMenuItems[0].value);
+                  _town = snapshot.data.docs.map((e) {
+                    Town t = new Town.fromData(e.id, e.data());
+                    return t;
+                  }).toList();
+                  _dropdownMenuItems = buildDropdownMenuItems(_town);
+                  if(_selectedTown == null){
+                    _selectedTown = _town.firstWhere((element) => element.number == _dropdownMenuItems[0].value);
                   }
                   return  DropdownButton(
-                    value: _selectedTownship.id,
+                    value: _selectedTown.number,
                     items: _dropdownMenuItems,
                     onChanged: onChangeMunicipioItem,
                     style: TextStyle(color: Colors.black87, fontSize: 24.0),
@@ -203,7 +199,7 @@ class _FormPageState extends State<FormPage> {
             SizedBox(
               height: 5.0,
             ),
-            Text('Actualmente: ${_selectedTownship == null ? '' : _selectedTownship.name}',
+            Text('Actualmente: ${_selectedTown == null ? '' : _selectedTown.name}',
                 style: TextStyle(
                   fontSize: 16.0,
                   fontStyle: FontStyle.italic,
@@ -217,13 +213,15 @@ class _FormPageState extends State<FormPage> {
 
   List<DropdownMenuItem<int>> buildDropdownMenuItems(List municipios) {
     List<DropdownMenuItem<int>> items = List();
-    for (Township municipio in municipios) {
-      items.add(
-        DropdownMenuItem(
-          value: municipio.id,
-          child: Text(municipio.name),
-        ),
-      );
+    if(municipios != null){
+      for (Town municipio in municipios) {
+        items.add(
+          DropdownMenuItem(
+            value: municipio.number,
+            child: Text(municipio.name),
+          ),
+        );
+      }
     }
     return items;
   }

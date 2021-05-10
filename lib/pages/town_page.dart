@@ -6,15 +6,19 @@ import 'package:lupita_ft/components/button_components.dart';
 import 'package:lupita_ft/model/town.dart';
 import 'package:lupita_ft/pages/form.dart';
 import 'package:lupita_ft/pages/home.dart';
+import 'package:flutter_plugin_pdf_viewer/flutter_plugin_pdf_viewer.dart';
 
-class ReportPage extends StatefulWidget {
+class TownPage extends StatefulWidget {
   @override
-  _ReportPageState createState() => _ReportPageState();
+  _TownPage createState() => _TownPage();
 }
 
-class _ReportPageState extends State<ReportPage> {
+class _TownPage extends State<TownPage> {
   DatabaseReference _firebase;
   final List<Map<dynamic, dynamic>> lists = new List<Map<dynamic, dynamic>>();
+  int _isLoadingViewFile = -1;
+  int _isChargeViewFile = -1;
+  PDFDocument documentPdf;
 
   @override
   void initState() {
@@ -30,40 +34,51 @@ class _ReportPageState extends State<ReportPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SingleChildScrollView(
+      floatingActionButtonLocation: FloatingActionButtonLocation.startTop,
+      floatingActionButton: _isChargeViewFile != -1 ?
+
+      Row(children: [
+        SizedBox(
+          height: 25.0,
+        ),
+        FloatingActionButton(
+            tooltip: "Regresar",
+            child: Icon(Icons.arrow_back),
+            onPressed: () {
+              setState(() {
+                _isChargeViewFile = -1;
+              });
+            })
+      ],) : Text(""),
+      body:  _isChargeViewFile != -1 ? PDFViewer(document: documentPdf) :
+      SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 15.0),
           child: Column(
             children: <Widget>[
-              Container(
-                width: 200,
-                child: Image.asset('images/leer.jpg'),
-              ),
-              Center(
-                child: Text('Infórmate del Municipio'),
-              ),
-              buildSelect(),
               SizedBox(
                 height: 25.0,
               ),
-              LButtons.buttonPrimary('Buscar', () => {}, context),
-              SizedBox(
-                height: 50.0,
+              buildSelect(),
+              Center(
+                  child:
+                  Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 30),
+                      child:  Text(_selectedTownship != null ? _selectedTownship.summary ?? '' : '', style: TextStyle(fontSize: 18),))
+
               ),
               Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: FutureBuilder(
-                    future: search(),
-                    builder: (context, AsyncSnapshot<DataSnapshot> snapshot) {
+                padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 8),
+                child: StreamBuilder(
+                    stream: search(),
+                    builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
                       if (snapshot != null && snapshot.hasData) {
                         lists.clear();
-                        Map<dynamic, dynamic> values = snapshot.data.value;
-                        if (values != null && values.length > 0) {
-                          values.forEach((key, values) {
-                            if(values["descripcion"].toString().isNotEmpty){
-                              lists.add(values);
-                            }
-                          });
+                        List<Map<String, dynamic>> values = snapshot.data.docs.map((e) {
+                          return e.data();
+                        }).toList();
+                        if (values.length > 0) {
+
                         } else {
                           return new Container(
                             width: 250,
@@ -73,9 +88,7 @@ class _ReportPageState extends State<ReportPage> {
                                   width: 150,
                                   child: Image.asset('images/denunciar.jpg'),
                                 ),
-                                Text('No se encontraron denuncias'),
-                                LButtons.buttonPrimary(
-                                    'Crear Denuncia', goToFormPage, context)
+                                Text('No se encontraron más detalles para este municipio.')
                               ],
                             ),
                           );
@@ -83,35 +96,40 @@ class _ReportPageState extends State<ReportPage> {
                         return new ListView.builder(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
-                            itemCount: lists.length,
+                            itemCount: values.length,
                             itemBuilder: (BuildContext context, int index) {
-                              return
-                               Padding(
-                                 padding: EdgeInsets.symmetric(vertical: 15, horizontal: 0),
-                                 child:  Card(
-                                 margin: EdgeInsets.symmetric(vertical: 5.0),
-                                 child: Column(
-                                   crossAxisAlignment: CrossAxisAlignment.start,
-                                   children: <Widget>[
-                                     Text(
-                                       "Fecha: " + lists[index]["fecha"],
-                                       style: TextStyle(
-                                           color: Colors.black, fontSize: 16),
-                                     ),
-                                     SizedBox(
-                                       height: 5,
-                                     ),
-                                     SelectableText(
-                                       lists[index]["descripcion"],
-                                       style: TextStyle(
-                                           color: Colors.black45, fontSize: 20),
-                                     ),
-                                     SizedBox(
-                                       height: 15,
-                                     ),
-                                   ],
-                                 ),
-                               ),);
+                              bool isLoadingPdf = false;
+                              bool isChargePdf = false;
+                              PDFDocument documentPdf;
+                              return Card(
+                                clipBehavior: Clip.antiAlias,
+                                margin: EdgeInsets.symmetric(vertical: 5.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    ListTile(
+                                      leading: Icon(Icons.arrow_drop_down_circle),
+                                      title: SelectableText(values[index]["nombre"], style: TextStyle(fontSize: 24),),
+                                    ),
+                                    Padding(
+                                        padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 30),
+                                        child: SelectableText(
+                                          values[index]["descripcion"].toString().replaceAll('\n', '\n').replaceAll('/n', '\n').replaceAll('  ', '\n'),
+                                          style: TextStyle(
+                                              color: Colors.black, fontSize: 16),
+                                        )
+                                    ),
+                                    values[index]["archivo"] != null && values[index]["archivo"].toString().isNotEmpty ? ButtonBar(
+                                      alignment: MainAxisAlignment.start,
+                                      children: [
+                                        _isLoadingViewFile == index ? Center(child: CircularProgressIndicator())
+                                            :
+                                        LButtons.buttonPrimary("Leer archivo PDF", () => chargeDocument(index, values[index]["archivo"].toString()), context),
+                                      ],
+                                    ) : Text(""),
+                                  ],
+                                ),
+                              );
                             });
                       }
                       if(_selectedTownship == null){
@@ -125,6 +143,7 @@ class _ReportPageState extends State<ReportPage> {
           ),
         ),
       ),
+
     );
   }
 
@@ -140,6 +159,19 @@ class _ReportPageState extends State<ReportPage> {
           borderSide: new BorderSide(color: Colors.teal),
         ),
         hintText: hintText);
+  }
+
+  Future<bool> chargeDocument(int index, String url) async {
+    setState(() {
+      _isChargeViewFile = -1;
+      _isLoadingViewFile = index;
+    });
+    documentPdf = await PDFDocument.fromURL(url);
+    setState(() {
+      _isLoadingViewFile = -1;
+      _isChargeViewFile = index;
+    });
+    return true;
   }
 
   void goToHomePage() {
@@ -217,16 +249,12 @@ class _ReportPageState extends State<ReportPage> {
     return items;
   }
 
-  Future<DataSnapshot> search() async  {
+  Stream<QuerySnapshot> search() {
     try {
       if(_selectedTownship == null){
         _selectedTownship = ModalRoute.of(context).settings.arguments;
       }
-      return _firebase
-          .orderByChild('municipio')
-          .equalTo(_selectedTownship == null ? '' :_selectedTownship.name)
-          .limitToFirst(20)
-          .once();
+      return _selectedTownship.getTownPage();
     } on PlatformException catch (e) {
       return null;
     }

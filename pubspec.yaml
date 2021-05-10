@@ -32,6 +32,7 @@ dependencies:
   firebase_storage: ^4.0.1
   cloud_firestore: ^0.14.1
   firebase_messaging: ^7.0.3
+  flutter_plugin_pdf_viewer:
 
 dev_dependencies:
   flutter_test:

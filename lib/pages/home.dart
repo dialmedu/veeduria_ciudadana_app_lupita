@@ -1,12 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:lupita_ft/model/NotificationItem.dart';
-import 'package:lupita_ft/model/township.dart';
+import 'package:lupita_ft/model/town.dart';
 import 'package:lupita_ft/pages/form.dart';
 import 'package:lupita_ft/pages/report.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:lupita_ft/pages/town_page.dart';
 
-import '../model/township.dart';
+import '../model/town.dart';
 
 class Home extends StatefulWidget {
   @override
@@ -128,6 +129,10 @@ class _HomePageState extends State<Home> {
                 ),
               ),
               buildSelect(),
+              Container(
+                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  child: _buildSelectedCardTown()
+              ),
               SizedBox(
                 height: 5.0,
               ),
@@ -147,6 +152,7 @@ class _HomePageState extends State<Home> {
                       'Leer',
                       goToReportPage,
                       Colors.yellow[200])),
+
               Center(
                 child: InkWell(
                   onTap: () {
@@ -164,16 +170,28 @@ class _HomePageState extends State<Home> {
 
   void goToFormPage() {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => FormPage()),
+      MaterialPageRoute(builder: (context) => FormPage(), settings: RouteSettings(
+        arguments: _selectedTown,
+      )),
     );
   }
 
   void goToReportPage() {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => ReportPage(), settings: RouteSettings(
-        arguments: _selectedMunicipio,
+        arguments: _selectedTown,
       )),
     );
+  }
+
+  void goToTownPage() {
+    if(_selectedTown != null){
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (context) => TownPage(), settings: RouteSettings(
+          arguments: _selectedTown,
+        )),
+      );
+    }
   }
 
   Widget _buildCard(String imagePatch, String text, String action,
@@ -254,20 +272,117 @@ class _HomePageState extends State<Home> {
     );
   }
 
-  List<Township> _municipios;
-  List<DropdownMenuItem<int>> _dropdownMenuItems;
-  Township _selectedMunicipio;
-
-  initList() {
-      _dropdownMenuItems = buildDropdownMenuItems(_municipios);
-      if(_selectedMunicipio == null){
-          _selectedMunicipio = _municipios.firstWhere((element) => element.id == _dropdownMenuItems[0].value);
-      }
+  Widget _buildSelectedCardTown(){
+    if(_selectedTown != null && _selectedTown.number != 0) {
+      return _buildCardTown(
+          _selectedTown.name,
+          _selectedTown.summary.isNotEmpty ?  _selectedTown.summary.substring(0, _selectedTown.summary.length > 70 ? 70 : _selectedTown.summary.length)+'...':
+          'Conoce más sobre el municipo de ' + _selectedTown.name + '.',
+          'Conocer Más',
+          goToTownPage,
+          Colors.green[600]
+      );
+    }
+    return Text('');
   }
 
-  onChangeMunicipioItem(int selectedMunicipio) {
+  Widget _buildCardTown(String title,String text, String action,
+      Function callback, Color boxColor) {
+    return Padding(
+      padding: EdgeInsets.only(top: 10.0, bottom: 5.0, left: 5.0, right: 5.0),
+      child: InkWell(
+        onTap: callback,
+        child: Container(
+          decoration: BoxDecoration(
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.blue.withOpacity(0.1),
+                  spreadRadius: 2,
+                  blurRadius: 5.0),
+            ],
+            borderRadius: BorderRadius.circular(10.0),
+            color: Colors.white,
+          ),
+
+          width: MediaQuery.of(context).size.width * 0.9,
+          child: Row(
+            children: <Widget>[
+
+              Container(
+                decoration: BoxDecoration(color: boxColor,
+                  borderRadius: BorderRadius.circular(10.0),),
+                child: Column(
+                  children: <Widget>[
+                    Container(
+
+                      width: MediaQuery.of(context).size.width * 0.90,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 15.0,horizontal: 30.0),
+                        child: Text(title,
+                            style: TextStyle(
+                              fontStyle: FontStyle.italic,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 25,
+                              color: Colors.white,
+                            ),
+                          textAlign: TextAlign.left,
+                        ),
+                      ),
+                    ),
+                    Container(
+
+                      width: MediaQuery.of(context).size.width * 0.70,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(10.0,15.0,10.0,10.0),
+                        child: Text(text,
+                          style: TextStyle(
+                            fontStyle: FontStyle.italic,
+                            fontSize: 18,
+                            color: Colors.white,
+                          ),
+                          textAlign: TextAlign.right,),
+                      ),
+                    ),
+                    SizedBox(
+                      height: 25.0,
+                    ),
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10.0),
+                        color: Colors.white,
+                      ),
+                      width: _size_box,
+                      height: 30,
+                      child: Center(
+                        child: Text(
+                          action,
+                          style: TextStyle(
+                              fontSize: 14.0,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black),
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      height: 15.0,
+                    ),
+                  ],
+                ),
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<Town> _towns;
+  List<DropdownMenuItem<int>> _dropdownMenuItems;
+  Town _selectedTown;
+
+  onChangeTownItem(int selectedTown) {
     setState(() {
-      _selectedMunicipio = _municipios.firstWhere((element) => element.id == selectedMunicipio);
+      _selectedTown = _towns.firstWhere((element) => element.number == selectedTown);
     });
   }
 
@@ -283,27 +398,33 @@ class _HomePageState extends State<Home> {
               height: 5.0,
             ),
             StreamBuilder(
-              stream: Township.getTownships(),
+              stream: Town.getTowns(),
               builder: (context, AsyncSnapshot<QuerySnapshot> snapshot){
               if (!snapshot.hasData) {
                   return Text('Cargando Municipios...');
               }
-              _municipios = snapshot.data.docs.map((e) => new Township(e.data()['municipio_id'], e.data()['nombre'])).toList();
-              _dropdownMenuItems = buildDropdownMenuItems(_municipios);
-              if(_selectedMunicipio == null){
-                _selectedMunicipio = _municipios.firstWhere((element) => element.id == _dropdownMenuItems[0].value);
+              _towns = new List();
+              _towns.add(new Town(0,"Seleccione municipio",""));
+              _towns.addAll(snapshot.data.docs.map((e) {
+                Town t =
+                new Town.fromData(e.id, e.data());
+                return t;
+              }).toList());
+              _dropdownMenuItems = buildDropdownMenuItems(_towns);
+              if(_selectedTown == null){
+                  _selectedTown = _towns.firstWhere((element) => element.number == _dropdownMenuItems[0].value);
               }
               return  DropdownButton(
-                value: _selectedMunicipio.id,
+                value: _selectedTown.number,
                 items: _dropdownMenuItems,
-                onChanged: onChangeMunicipioItem,
+                onChanged: onChangeTownItem,
                 style: TextStyle(color: Colors.black87, fontSize: 24.0),
               );
             }),
             SizedBox(
               height: 5.0,
             ),
-            Text('Actualmente: ${_selectedMunicipio == null ? '' : _selectedMunicipio.name}',
+            Text('Actualmente: ${_selectedTown == null ? '' : _selectedTown.name}',
                 style: TextStyle(
                   fontSize: 16.0,
                   fontStyle: FontStyle.italic,
@@ -315,13 +436,13 @@ class _HomePageState extends State<Home> {
     );
   }
 
-  List<DropdownMenuItem<int>> buildDropdownMenuItems(List municipios) {
+  List<DropdownMenuItem<int>> buildDropdownMenuItems(List<Town> towns) {
     List<DropdownMenuItem<int>> items = List();
-    for (Township municipio in municipios) {
+    for (Town town in towns) {
       items.add(
         DropdownMenuItem(
-          value: municipio.id,
-          child: Text(municipio.name),
+          value: town.number,
+          child: Text(town.name),
         ),
       );
     }
